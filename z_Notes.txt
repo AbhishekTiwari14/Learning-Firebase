@@ -1,0 +1,111 @@
+(1) Connect firebase to your react app:
+    using initilaizeApp() method and configure firebase with env. vars. to connect it.
+    -> in firebase.js: 
+    
+        import { initializeApp } from "firebase/app"
+        import { getAuth, GoogleAuthProvider } from "firebase/auth"
+        import { getFirestore } from "firebase/firestore"
+
+        const firebaseConfig = {
+        apiKey: "AIzaSyA0UuOc6V5os1oHtezPwaBdmzkkgqfr6ak",
+        authDomain: "learning-firebase-piyush.firebaseapp.com",
+        projectId: "learning-firebase-piyush",
+        storageBucket: "learning-firebase-piyush.firebasestorage.app",
+        messagingSenderId: "429219484700",
+        appId: "1:429219484700:web:477ef03a4d151175243bd9",
+        }
+
+        export const app = initializeApp(firebaseConfig)
+        export const auth = getAuth(app)
+        export const db = getFirestore(app)
+        export const googleProvider = new GoogleAuthProvider()
+
+    
+
+(2) Authentication: 
+    S1: create context for auth with loginWithGoogle() and logout() fxns. (using methods provided by firebase/auth such as signOut & signInWithPopup) and useAuth custom hook.
+    contexts -> AuthContext.jsx:
+    
+    import { onAuthStateChanged, signInWithPopup, signOut } from "firebase/auth"
+    import { auth, googleProvider } from "../firebase"
+    import { createContext, useContext } from "react"
+    import { useState, useEffect } from "react"
+
+    const AuthContext = createContext()
+
+    export function AuthProvider({ children }) {
+    const [currentUser, setCurrentUser] = useState(true)
+    const [loading, setLoading] = useState(true)
+
+    // Set up a listener for authentication state changes
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+        setCurrentUser(user)
+        setLoading(false)
+        })
+        return unsubscribe // Clean up the listener on unmount
+    }, [])
+
+    // Google login function
+    const loginWithGoogle = async () => {
+        try {
+        await signInWithPopup(auth, googleProvider)
+        } catch (error) {
+        console.error("Google Sign-In Error:", error)
+        }
+    }
+
+    // Logout function
+    const logout = async () => {
+        try {
+        await signOut(auth)
+        } catch (error) {
+        console.error("Logout Error:", error)
+        }
+    }
+
+    // Value provided by the AuthContext
+    const value = {
+        currentUser,
+        loginWithGoogle,
+        logout,
+    }
+
+    return (
+        <AuthContext.Provider value={value}>
+        {!loading && children}
+        </AuthContext.Provider>
+    )
+    }
+
+    // Custom hook to use AuthContext in other components
+    export const useAuth = () => {
+    const context = useContext(AuthContext)
+    if (!context) {
+        throw new Error("useAuth must be used within an AuthProvider")
+    }
+    return context
+    }
+
+    S2: use the useAuth() hook to create the signup functionality: 
+    In app.jsx:
+    function App() {
+        const { currentUser, loginWithGoogle } = useAuth()
+        useEffect(() => {
+            console.log("User profile photo URL:", currentUser)
+        }, [currentUser])
+        return (
+            <>
+            <header>
+                <h1>Google Docs Clone</h1>
+                {currentUser ? (
+                <button onClick={logout}> Logout</button>
+                ) : (
+                <button onClick={loginWithGoogle}> Login/Signup</button>
+                )}
+            </header>
+            </>
+        )
+    }
+
+(3) 
